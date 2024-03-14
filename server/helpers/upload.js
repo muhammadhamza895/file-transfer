@@ -3,10 +3,20 @@ const archiver = require("archiver");
 const rimraf = require("rimraf");
 const uploadFolder = require("../uploads/details");
 const fileRecord = require("../models/filesRecord");
+const WebSocket = require("ws");
+const wss = new WebSocket.Server({ port: 8081 });
 
 // UPLOAD FOLDER LOCATION
 const path = require("../uploads/details");
 const { deleteTime } = require("../uploads/details");
+
+// const sendProgressUpdate = (progress) => {
+//   wss.clients.forEach((client) => {
+//     if (client.readyState === WebSocket.OPEN) {
+//       client.send(JSON.stringify(progress));
+//     }
+//   });
+// };
 
 function createZip(files) {
   return new Promise((resolve, reject) => {
@@ -25,9 +35,12 @@ function createZip(files) {
       resolve(zipName + ".zip");
     });
 
-    archive.on('progress', (progress) => {
-      console.log(`Progress: ${progress.entries.processed}/${progress.entries.total} files processed`);
-  });
+    archive.on("progress", (progress) => {
+      console.log(
+        `Progress: ${progress.entries.processed}/${progress.entries.total} files processed`
+      );
+      // sendProgressUpdate(progress);
+    });
 
     archive.on("error", (err) => {
       reject(err);

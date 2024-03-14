@@ -23,6 +23,8 @@ import { toast } from "react-toastify";
 import LinearProgress from "@mui/material/LinearProgress";
 import { useParams } from "react-router";
 
+const ws = new WebSocket("ws://localhost:8081");
+
 const Upload = () => {
   const params = useParams();
 
@@ -46,7 +48,9 @@ const Upload = () => {
 
   const [progress, setProgress] = useState(0);
   const [uploadingStatus, setUploadingStatus] = useState(false);
+  const [creatingZipProgress, setCreatingZipProgress] = useState(0);
   const [downloadProgess, setDownloadProgress] = useState(0);
+  const [downloadingStatus, setDownloadingStatus] = useState(false);
 
   // ANIMATION FUNCTIONS
   const handleAnimation = () => {
@@ -71,7 +75,20 @@ const Upload = () => {
   };
 
   // API FUNCTIONS
+  ws.onmessage = (event) => {
+    setDownloadingStatus(true);
+    const progress = JSON.parse(event.data);
+    console.log("Received progress update:", progress);
+    const percentage = Math.floor(
+      (progress.entries.processed / progress.entries.total) * 100
+    );
+    setCreatingZipProgress(percentage);
+  };
+
   const sendFile = async () => {
+    if (files.length == 0) {
+      return toast.error("No files to send");
+    }
     setUploadingStatus(true);
     const data = new FormData();
     files.forEach((file, i) => {
@@ -119,6 +136,7 @@ const Upload = () => {
         let progress = Math.round(
           (progressEvent.loaded / progressEvent.total) * 100
         );
+        console.log(progressEvent);
         setDownloadProgress(progress);
       },
     });
@@ -127,7 +145,10 @@ const Upload = () => {
     ) {
       return toast.error("Invalid Code");
     }
-    const href = URL.createObjectURL(new Blob([response?.data]));
+    setDownloadingStatus(true);
+    const blob = new Blob([response.data], { type: 'application/zip' });
+    const href = URL.createObjectURL(blob);
+    // const href = URL.createObjectURL(new Blob([response?.data]));
     const link = document.createElement("a");
     link.href = href;
     link.setAttribute("download", "file.zip");
@@ -167,7 +188,7 @@ const Upload = () => {
   // STATE FUNCTIONS
   const handleSend = (option) => {
     setLinkReceiver(false);
-    handleAnimation();   // OPTION 1 = SEND, 0 = RECIEVE
+    handleAnimation(); // OPTION 1 = SEND, 0 = RECIEVE
     if (option) {
       setSend(true);
       setRecieve(false);
@@ -215,11 +236,11 @@ const Upload = () => {
     }
   }, [codeExpired, intervalId]);
 
-  useEffect(() => {
-    if (downloadProgess == 100) {
-      setDownloadProgress(0);
-    }
-  }, [downloadProgess]);
+  // useEffect(() => {
+  //   if (downloadProgess == 100) {
+  //     setDownloadProgress(0);
+  //   }
+  // }, [downloadProgess]);
 
   useEffect(() => {
     if (send || recieve || linkReciever) {
@@ -229,6 +250,28 @@ const Upload = () => {
     }
   }, [send, recieve, linkReciever]);
 
+  // useEffect(() => {
+  //   if (creatingZipProgress == 100) {
+  //     setCreatingZipProgress(0);
+  //   }
+  // }, [creatingZipProgress]);
+
+  useEffect(() => {
+    if (document.getElementsByClassName("statusContainerAnimated").length) {
+      if (downloadingStatus) {
+        const requiredHeight =
+          document.getElementsByClassName("statusContainer")[0].offsetHeight;
+        document.getElementsByClassName(
+          "statusContainerAnimated"
+        )[0].style.height = `${requiredHeight}px`;
+        return;
+      }
+      document.getElementsByClassName(
+        "statusContainerAnimated"
+      )[0].style.height = `0px`;
+    }
+  }, [downloadingStatus]);
+
   return (
     <>
       <div className="uploadSection container">
@@ -237,27 +280,27 @@ const Upload = () => {
             <img className="uploadSectionImage" src={laptop} alt="" />
 
             <div className="uploadSectionImageSectionOptionsConteiner">
-                  {send ? (
-                    <div className="uploadSectionImageSectionChangeOption">
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleSend(0)}
-                      >
-                        Recieve
-                      </button>
-                    </div>
-                  ) : (
-                    (recieve || linkReciever) && (
-                      <div className="uploadSectionImageSectionChangeOption">
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => handleSend(1)}
-                        >
-                          Send
-                        </button>
-                      </div>
-                    )
-                  )}
+              {send ? (
+                <div className="uploadSectionImageSectionChangeOption">
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleSend(0)}
+                  >
+                    Recieve
+                  </button>
+                </div>
+              ) : (
+                (recieve || linkReciever) && (
+                  <div className="uploadSectionImageSectionChangeOption">
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => handleSend(1)}
+                    >
+                      Send
+                    </button>
+                  </div>
+                )
+              )}
             </div>
           </div>
 
@@ -392,9 +435,9 @@ const Upload = () => {
                               }}
                               onClick={() => setTransferType(0)}
                             >
-                              <GoFileDirectory
+                              {/* <GoFileDirectory
                                 style={{ marginRight: "5px", fontSize: "18px" }}
-                              />
+                              /> */}
                               Direct
                             </span>
                             <span
@@ -409,9 +452,9 @@ const Upload = () => {
                               }}
                               onClick={() => setTransferType(1)}
                             >
-                              <CiLink
+                              {/* <CiLink
                                 style={{ marginRight: "5px", fontSize: "18px" }}
-                              />
+                              /> */}
                               Link
                             </span>
                             <span
@@ -426,9 +469,9 @@ const Upload = () => {
                               }}
                               onClick={() => setTransferType(2)}
                             >
-                              <CiMail
+                              {/* <CiMail
                                 style={{ marginRight: "5px", fontSize: "18px" }}
-                              />
+                              /> */}
                               E-mail
                             </span>
                           </div>
@@ -516,13 +559,40 @@ const Upload = () => {
                       Download
                     </button>
                   </div>
-                  <LinearProgress
-                    variant="determinate"
-                    className={`progressBar ${
-                      downloadProgess !== 0 ? "progressBarActive" : ""
-                    }`}
-                    value={downloadProgess}
-                  />
+                  <div className="statusContainerAnimated">
+                    <div className="statusContainer">
+                      <div>
+                        <p className={`status opacity0`}>
+                          {creatingZipProgress === 100
+                            ? "Zip Created"
+                            : "Creating Zip"}
+                        </p>
+                        <LinearProgress
+                          variant="determinate"
+                          color="info"
+                          className={`progressBar ${
+                            creatingZipProgress !== 0 ? "progressBarActive" : ""
+                          }`}
+                          value={creatingZipProgress}
+                        />
+                      </div>
+                      <div>
+                        <p className={`status opacity0`}>
+                          {downloadProgess == 100
+                            ? "Downloaded"
+                            : "Downloading"}
+                        </p>
+                        <LinearProgress
+                          variant="determinate"
+                          color="success"
+                          className={`progressBar ${
+                            downloadProgess !== 0 ? "progressBarActive" : ""
+                          }`}
+                          value={downloadProgess}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -571,10 +641,16 @@ const Upload = () => {
                     <hr style={{ marginTop: "0px" }} />
                     <div className="directLinkEmail">
                       <span
+                        className={`specificTransferType
+                          ${transferType == 0 ? "activeTransferType" : ""}
+                        `}
                         style={{
                           display: "flex",
                           alignItems: "center",
                           cursor: "pointer",
+                        }}
+                        onClick={() => {
+                          setTransferType(0);
                         }}
                       >
                         <GoFileDirectory
@@ -583,10 +659,16 @@ const Upload = () => {
                         Direct
                       </span>
                       <span
+                        className={
+                          transferType == 1 ? "activeTransferType" : ""
+                        }
                         style={{
                           display: "flex",
                           alignItems: "center",
                           cursor: "pointer",
+                        }}
+                        onClick={() => {
+                          setTransferType(1);
                         }}
                       >
                         <CiLink
@@ -595,10 +677,16 @@ const Upload = () => {
                         Link
                       </span>
                       <span
+                        className={
+                          transferType == 2 ? "activeTransferType" : ""
+                        }
                         style={{
                           display: "flex",
                           alignItems: "center",
                           cursor: "pointer",
+                        }}
+                        onClick={() => {
+                          setTransferType(2);
                         }}
                       >
                         <CiMail

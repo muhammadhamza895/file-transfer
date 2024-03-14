@@ -26,38 +26,6 @@ const uploadFiles = (req, res) => {
       console.error(err);
       return res.status(500).send("An error occurred while uploading files.");
     }
-    //   .then(async (zipFileName) => {
-    //     const fileNames = req.files.map((file) => file.filename);
-    //     deleteTempFiles(fileNames);
-    //     const code = uuidv4().substring(0, 6);
-    //     const fileData = new fileRecord({
-    //       fileName: zipFileName,
-    //       fileCode: code,
-    //       deleteDocument: new Date(),
-    //     });
-    //     await fileData.save();
-    //     deleteUploadedFiles(zipFileName, code);
-    //     if (transferType == 0) {
-    //       return res.send({
-    //         success: true,
-    //         message: "Files uploaded successfully.",
-    //         file: { fileName: zipFileName, code },
-    //       });
-    //     } else if (transferType == 1) {
-    //       return res.send({
-    //         success: true,
-    //         message: "Files uploaded successfully.",
-    //         file: { fileName: zipFileName, link: code },
-    //       });
-    //     }
-    //   })
-    //   .catch((err) => {
-    //     console.error(err);
-    //     res
-    //       .status(500)
-    //       .send("An error occurred while creating the ZIP folder.");
-    //   });
-
     const fileNames = req.files.map((file) => file.filename);
     const code = uuidv4().substring(0, 6);
     const fileData = new fileRecord({
@@ -87,6 +55,7 @@ const uploadFiles = (req, res) => {
 const downloadFiles = async (req, res) => {
   const code = req.params.code;
   const file = await fileRecord.findOne({ fileCode: code });
+  if (!file) return res.send({ success: false, message: "Invalid code" });
   const fileNames = file?.fileName;
 
   for (let i = 0; i < fileNames.length; i++) {
@@ -112,6 +81,7 @@ const downloadFiles = async (req, res) => {
         let bytesSent = 0;
 
         readStream.on("data", (chunk) => {
+          console.log(chunk)
           bytesSent += chunk.length;
           const progress = (bytesSent / fileSize) * 100;
           res.write(chunk);
@@ -123,6 +93,7 @@ const downloadFiles = async (req, res) => {
               console.error("Error deleting zip file:", err);
             } else {
               console.log("zip File deleted successfully");
+              res.end()
             }
           });
           res.end();
