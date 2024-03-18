@@ -131,6 +131,7 @@ const Upload = () => {
   };
 
   const downloadZipFile = async (paramCode) => {
+    setDownloadingStatus(true);
     const response = await downloadFile.get(`/${downloadCode || paramCode}`, {
       onDownloadProgress: (progressEvent) => {
         let progress = Math.round(
@@ -145,8 +146,8 @@ const Upload = () => {
     ) {
       return toast.error("Invalid Code");
     }
-    setDownloadingStatus(true);
-    const blob = new Blob([response.data], { type: 'application/zip' });
+    console.log(response)
+    const blob = new Blob([response.data], { type: "application/zip" });
     const href = URL.createObjectURL(blob);
     // const href = URL.createObjectURL(new Blob([response?.data]));
     const link = document.createElement("a");
@@ -236,11 +237,13 @@ const Upload = () => {
     }
   }, [codeExpired, intervalId]);
 
-  // useEffect(() => {
-  //   if (downloadProgess == 100) {
-  //     setDownloadProgress(0);
-  //   }
-  // }, [downloadProgess]);
+  useEffect(() => {
+    if (downloadProgess == 100) {
+      setCreatingZipProgress(0);
+      setDownloadProgress(0);
+      setDownloadingStatus(false);
+    }
+  }, [downloadProgess]);
 
   useEffect(() => {
     if (send || recieve || linkReciever) {
@@ -271,6 +274,7 @@ const Upload = () => {
       )[0].style.height = `0px`;
     }
   }, [downloadingStatus]);
+
 
   return (
     <>
@@ -509,7 +513,7 @@ const Upload = () => {
                     <input
                       id="inpuFile"
                       type="file"
-                      multiple
+                      multiple  
                       onChange={(e) => handleUploadedFiles(e.target.files)}
                       style={{ display: "none" }}
                     />
@@ -560,9 +564,9 @@ const Upload = () => {
                     </button>
                   </div>
                   <div className="statusContainerAnimated">
-                    <div className="statusContainer">
+                    <div className={`statusContainer`}>
                       <div>
-                        <p className={`status opacity0`}>
+                        <p className={`status opacity0 ${creatingZipProgress > 0 ? 'opacity1' : ''}`}>
                           {creatingZipProgress === 100
                             ? "Zip Created"
                             : "Creating Zip"}
@@ -577,7 +581,11 @@ const Upload = () => {
                         />
                       </div>
                       <div>
-                        <p className={`status opacity0`}>
+                        <p
+                          className={`status opacity0 
+                          ${downloadProgess > 0 ? "opacity1" : ""}
+                          `}
+                        >
                           {downloadProgess == 100
                             ? "Downloaded"
                             : "Downloading"}

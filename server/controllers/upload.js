@@ -10,7 +10,7 @@ const {
 } = require("../helpers/upload");
 
 // UPLOAD FOLDER LOCATION
-const path = require("../uploads/details");
+const { uploadFilesLocation } = require("../uploads/details");
 
 // DB
 const fileRecord = require("../models/filesRecord");
@@ -59,7 +59,7 @@ const downloadFiles = async (req, res) => {
   const fileNames = file?.fileName;
 
   for (let i = 0; i < fileNames.length; i++) {
-    const filePath = path + file.fileName[i];
+    const filePath = uploadFilesLocation + file.fileName[i];
     if (!fs.existsSync(filePath))
       return res
         .status(200)
@@ -67,7 +67,7 @@ const downloadFiles = async (req, res) => {
   }
   createZip(fileNames)
     .then(async (zipFileName) => {
-      const filePath = path + zipFileName;
+      const filePath = uploadFilesLocation + zipFileName;
       if (fs.existsSync(filePath)) {
         const fileSize = fs.statSync(filePath).size;
         const readStream = fs.createReadStream(filePath);
@@ -81,7 +81,7 @@ const downloadFiles = async (req, res) => {
         let bytesSent = 0;
 
         readStream.on("data", (chunk) => {
-          console.log(chunk)
+          console.log(chunk);
           bytesSent += chunk.length;
           const progress = (bytesSent / fileSize) * 100;
           res.write(chunk);
@@ -93,7 +93,7 @@ const downloadFiles = async (req, res) => {
               console.error("Error deleting zip file:", err);
             } else {
               console.log("zip File deleted successfully");
-              res.end()
+              res.end();
             }
           });
           res.end();
@@ -135,7 +135,7 @@ const recieveFileNames = async (req, res) => {
 const downloadSIngleFile = async (req, res) => {
   try {
     const fileName = req.params.fileName;
-    const filePath = path + fileName;
+    const filePath = uploadFilesLocation + fileName;
     if (fs.existsSync(filePath)) {
       const readStream = fs.createReadStream(filePath);
       const fileSize = fs.statSync(filePath).size;
