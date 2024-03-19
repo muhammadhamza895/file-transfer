@@ -19,23 +19,25 @@ const SignUpUser = async (req, res) => {
   }
 };
 
-const loginUser = (req, res) => {
+const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = userModel.findOne({ email, password });
+    const user = await userModel.findOne({ email, password });
     if (!user) {
-      return res.send({ success: false, message: "User not found." });
+      return res.send({ success: false, message: "Invalid credentials" });
     }
     var token = jwt.sign({ id: user._id, email: user.email }, "shhhhh", {
       expiresIn: "7d",
     });
-    res
-      .status(200)
-      .send({
-        success: true,
-        user: { email, token },
-        message: "User logged in successfully.",
-      });
+    res.status(200).send({
+      success: true,
+      user: {
+        email: user.email,
+        subscriptionType: user.subscriptionType,
+        token,
+      },
+      message: "User logged in successfully.",
+    });
   } catch (error) {
     console.log(error);
     res.send({ success: false, message: "Error in login" });

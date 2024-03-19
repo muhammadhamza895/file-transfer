@@ -17,6 +17,7 @@ import {
   downloadFile,
   recieveFilesNames,
   getSingleFile,
+  fetchSubscriptionDetails,
 } from "../axios/axios";
 
 import { toast } from "react-toastify";
@@ -33,6 +34,10 @@ const Upload = () => {
   const [recieve, setRecieve] = useState(false);
   const [files, setFiles] = useState([]);
   const [transferType, setTransferType] = useState(0); // 0 = Direct, 1 = Link, 2 = Email
+  const [filesList, setFilesList] = useState([]);
+
+  const [uploadedFilesSize, setUploadedFilesSize] = useState(0);
+  const [uploadSizeLimit, setUploadSizeLimit] = useState();
 
   const [code, setCode] = useState(0);
   const [codeExpired, setCodeExpired] = useState();
@@ -44,7 +49,6 @@ const Upload = () => {
   const [link, setLink] = useState("");
   const [paramCode, setParamCode] = useState();
   const [linkReciever, setLinkReceiver] = useState(false);
-  const [filesList, setFilesList] = useState([]);
 
   const [progress, setProgress] = useState(0);
   const [uploadingStatus, setUploadingStatus] = useState(false);
@@ -61,9 +65,21 @@ const Upload = () => {
       "50%";
   };
 
-  const statusAnimation =()=>{
-    
-  }
+  const statusAnimation = () => {
+    if (document.getElementsByClassName("statusContainerAnimated").length) {
+      if (downloadingStatus) {
+        const requiredHeight =
+          document.getElementsByClassName("statusContainer")[0].offsetHeight;
+        document.getElementsByClassName(
+          "statusContainerAnimated"
+        )[0].style.height = `${requiredHeight}px`;
+        return;
+      }
+      document.getElementsByClassName(
+        "statusContainerAnimated"
+      )[0].style.height = `0px`;
+    }
+  };
 
   // FILE HANDLING
   const handleUploadedFiles = (uploadedFile) => {
@@ -153,7 +169,6 @@ const Upload = () => {
     console.log(response);
     const blob = new Blob([response.data], { type: "application/zip" });
     const href = URL.createObjectURL(blob);
-    // const href = URL.createObjectURL(new Blob([response?.data]));
     const link = document.createElement("a");
     link.href = href;
     link.setAttribute("download", "file.zip");
@@ -166,9 +181,6 @@ const Upload = () => {
   const getFileNames = async (code) => {
     const response = await recieveFilesNames.get(`/${code}`);
     if (response?.data?.success) {
-      // const fileNames = response?.data?.filesList.map((file) => {
-      //   return file.split('--').pop()
-      // });
       setFilesList(response?.data?.filesList);
       console.log(response?.data?.filesList);
     }
@@ -194,6 +206,11 @@ const Upload = () => {
     URL.revokeObjectURL(href);
   };
 
+  const getSubscriptionDetails = async (subscriptionType) => {
+    const response = await fetchSubscriptionDetails.get(`/${subscriptionType}`);
+    setUploadSizeLimit(response?.data?.subscriptionDetails?.sizePerTransfer);
+  };
+
   // STATE FUNCTIONS
   const handleSend = (option) => {
     setLinkReceiver(false);
@@ -215,6 +232,12 @@ const Upload = () => {
         setLinkReceiver(true);
         getFileNames(params?.code);
       }, 500);
+    }
+    const subscriptionType = localStorage.getItem("subscriptionType");
+    if (subscriptionType) {
+      getSubscriptionDetails(subscriptionType);
+    } else {
+      setUploadSizeLimit(100000);
     }
   }, []);
 
@@ -262,20 +285,16 @@ const Upload = () => {
   }, [send, recieve, linkReciever]);
 
   useEffect(() => {
-    if (document.getElementsByClassName("statusContainerAnimated").length) {
-      if (downloadingStatus) {
-        const requiredHeight =
-          document.getElementsByClassName("statusContainer")[0].offsetHeight;
-        document.getElementsByClassName(
-          "statusContainerAnimated"
-        )[0].style.height = `${requiredHeight}px`;
-        return;
-      }
-      document.getElementsByClassName(
-        "statusContainerAnimated"
-      )[0].style.height = `0px`;
+    if (files?.length) {
+      const filesSize = files?.reduce((totalSize, file) => {
+        return totalSize + file.size;
+      }, 0);
+      const sizeInBytes = Math.ceil(filesSize / 1024);
+      setUploadedFilesSize(sizeInBytes);
     }
-  }, [downloadingStatus]);
+  }, [files]);
+
+  useEffect(() => statusAnimation(), [downloadingStatus]);
 
   return (
     <>
@@ -496,7 +515,7 @@ const Upload = () => {
                       </button>
                     </div>
 
-                    <div style={{marginTop: '10px'}}>
+                    <div style={{ marginTop: "10px" }}>
                       <p
                         className={`status opacity0 ${
                           creatingZipProgress > 0 ? "opacity1" : ""
@@ -515,7 +534,7 @@ const Upload = () => {
                         value={creatingZipProgress}
                       />
                     </div>
-                    <div style={{marginTop: '7px'}}>
+                    <div style={{ marginTop: "7px" }}>
                       <p
                         className={`status opacity0 
                           ${downloadProgess > 0 ? "opacity1" : ""}
@@ -533,28 +552,44 @@ const Upload = () => {
                     </div>
                   </>
                 ) : (
-                  <div className="uploadFileButtonContainer">
-                    <label
-                      htmlFor="inpuFile"
-                      className="btn btn-primary uploadFileButton"
-                    >
-                      Upload File
-                    </label>
-                    <input
-                      id="inpuFile"
-                      type="file"
-                      multiple
-                      onChange={(e) => handleUploadedFiles(e.target.files)}
-                      style={{ display: "none" }}
-                    />
-                    <button
-                      onClick={sendFile}
-                      className="btn btn-success uploadFileButton"
-                      disabled={code}
-                    >
-                      Send
-                    </button>
-                  </div>
+                  <>
+                    <div className="uploadFileButtonContainer">
+                      <label
+                        htmlFor="inpuFile"
+                        className="btn btn-primary uploadFileButton"
+                      >
+                        Upload File
+                      </label>
+                      <input
+                        id="inpuFile"
+                        type="file"
+                        multiple
+                        onChange={(e) => handleUploadedFiles(e.target.files)}
+                        style={{ display: "none" }}
+                      />
+                      <button
+                        onClick={sendFile}
+                        className="btn btn-success uploadFileButton"
+                        disabled={code || uploadSizeLimit < uploadedFilesSize}
+                      >
+                        Send
+                      </button>
+                    </div>
+                    {uploadSizeLimit < uploadedFilesSize && (
+                      <p
+                        style={{
+                          fontSize: "12px",
+                          color: "#E74C3C",
+                          textAlign: "center",
+                          marginTop: "5px",
+                        }}
+                      >
+                        Upload File Size {Math.round(uploadSizeLimit / 1024)}MB{" "}
+                        limit exceeded <br />
+                        uploaded Size {Math.round(uploadedFilesSize / 1024)}MB
+                      </p>
+                    )}
+                  </>
                 )}
                 <LinearProgress
                   variant="determinate"
