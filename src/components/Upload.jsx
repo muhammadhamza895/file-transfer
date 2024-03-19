@@ -61,6 +61,10 @@ const Upload = () => {
       "50%";
   };
 
+  const statusAnimation =()=>{
+    
+  }
+
   // FILE HANDLING
   const handleUploadedFiles = (uploadedFile) => {
     setCode(0);
@@ -146,7 +150,7 @@ const Upload = () => {
     ) {
       return toast.error("Invalid Code");
     }
-    console.log(response)
+    console.log(response);
     const blob = new Blob([response.data], { type: "application/zip" });
     const href = URL.createObjectURL(blob);
     // const href = URL.createObjectURL(new Blob([response?.data]));
@@ -162,7 +166,11 @@ const Upload = () => {
   const getFileNames = async (code) => {
     const response = await recieveFilesNames.get(`/${code}`);
     if (response?.data?.success) {
+      // const fileNames = response?.data?.filesList.map((file) => {
+      //   return file.split('--').pop()
+      // });
       setFilesList(response?.data?.filesList);
+      console.log(response?.data?.filesList);
     }
   };
 
@@ -253,12 +261,6 @@ const Upload = () => {
     }
   }, [send, recieve, linkReciever]);
 
-  // useEffect(() => {
-  //   if (creatingZipProgress == 100) {
-  //     setCreatingZipProgress(0);
-  //   }
-  // }, [creatingZipProgress]);
-
   useEffect(() => {
     if (document.getElementsByClassName("statusContainerAnimated").length) {
       if (downloadingStatus) {
@@ -274,7 +276,6 @@ const Upload = () => {
       )[0].style.height = `0px`;
     }
   }, [downloadingStatus]);
-
 
   return (
     <>
@@ -407,9 +408,9 @@ const Upload = () => {
                                     }}
                                   >
                                     <MdOutlineFileDownload
-                                      onClick={() =>
-                                        downloadSingleFile(fileName)
-                                      }
+                                      onClick={() => {
+                                        downloadSingleFile(fileName);
+                                      }}
                                       className="downloadIcon"
                                       style={{ cursor: "pointer" }}
                                     />
@@ -494,13 +495,42 @@ const Upload = () => {
                         Download Zip
                       </button>
                     </div>
-                    <LinearProgress
-                      variant="determinate"
-                      className={`progressBar ${
-                        downloadProgess !== 0 ? "progressBarActive" : ""
-                      }`}
-                      value={downloadProgess}
-                    />
+
+                    <div style={{marginTop: '10px'}}>
+                      <p
+                        className={`status opacity0 ${
+                          creatingZipProgress > 0 ? "opacity1" : ""
+                        }`}
+                      >
+                        {creatingZipProgress === 100
+                          ? "Zip Created"
+                          : "Creating Zip"}
+                      </p>
+                      <LinearProgress
+                        variant="determinate"
+                        color="info"
+                        className={`progressBar ${
+                          creatingZipProgress !== 0 ? "progressBarActive" : ""
+                        }`}
+                        value={creatingZipProgress}
+                      />
+                    </div>
+                    <div style={{marginTop: '7px'}}>
+                      <p
+                        className={`status opacity0 
+                          ${downloadProgess > 0 ? "opacity1" : ""}
+                          `}
+                      >
+                        {downloadProgess == 100 ? "Downloaded" : "Downloading"}
+                      </p>
+                      <LinearProgress
+                        variant="determinate"
+                        className={`progressBar ${
+                          downloadProgess !== 0 ? "progressBarActive" : ""
+                        }`}
+                        value={downloadProgess}
+                      />
+                    </div>
                   </>
                 ) : (
                   <div className="uploadFileButtonContainer">
@@ -513,7 +543,7 @@ const Upload = () => {
                     <input
                       id="inpuFile"
                       type="file"
-                      multiple  
+                      multiple
                       onChange={(e) => handleUploadedFiles(e.target.files)}
                       style={{ display: "none" }}
                     />
@@ -566,7 +596,11 @@ const Upload = () => {
                   <div className="statusContainerAnimated">
                     <div className={`statusContainer`}>
                       <div>
-                        <p className={`status opacity0 ${creatingZipProgress > 0 ? 'opacity1' : ''}`}>
+                        <p
+                          className={`status opacity0 ${
+                            creatingZipProgress > 0 ? "opacity1" : ""
+                          }`}
+                        >
                           {creatingZipProgress === 100
                             ? "Zip Created"
                             : "Creating Zip"}
