@@ -40,11 +40,12 @@ const Upload = () => {
   const [uploadSizeLimit, setUploadSizeLimit] = useState();
 
   const [code, setCode] = useState(0);
-  const [codeExpired, setCodeExpired] = useState();
-  const [codeStartTime, setCodeStartTime] = useState(0);
-  const [codeDuration, setCodeDuration] = useState();
-  const [intervalId, setIntervalId] = useState(null);
+  // const [codeExpired, setCodeExpired] = useState();
+  // const [codeStartTime, setCodeStartTime] = useState(0);
+  // const [codeDuration, setCodeDuration] = useState();
+  // const [intervalId, setIntervalId] = useState(null);
   const [downloadCode, setDownloadCode] = useState(0);
+  const [expiryTime, setExpiryTime] = useState();
 
   const [link, setLink] = useState("");
   const [paramCode, setParamCode] = useState();
@@ -126,15 +127,16 @@ const Upload = () => {
       },
     });
     if (response?.data?.success) {
-      setCodeStartTime(Date.now() / 1000);
-      setCodeDuration(300); // COUNTDOWN IN SECONDS
-      const startTime = Date.now() / 1000;
-      const duration = 300;
-      setCodeExpired(300);
-      const id = setInterval(function () {
-        countDown(startTime, duration);
-      }, 1000);
-      setIntervalId(id);
+      setExpiryTime(response?.data?.file?.expiryTime);
+      // setCodeStartTime(Date.now() / 1000);
+      // setCodeDuration(300);
+      // const startTime = Date.now() / 1000;
+      // const duration = 300;
+      // setCodeExpired(300);
+      // const id = setInterval(function () {
+      //   countDown(startTime, duration);
+      // }, 1000);
+      // setIntervalId(id);
       if (response?.data?.file?.code) {
         setCode(response?.data?.file?.code);
       } else if (response?.data?.file?.link) {
@@ -166,7 +168,6 @@ const Upload = () => {
     ) {
       return toast.error("Invalid Code");
     }
-    console.log(response);
     const blob = new Blob([response.data], { type: "application/zip" });
     const href = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -237,36 +238,36 @@ const Upload = () => {
     if (subscriptionType) {
       getSubscriptionDetails(subscriptionType);
     } else {
-      setUploadSizeLimit(100000);
+      setUploadSizeLimit(104857600);
     }
   }, []);
 
-  const countDown = (startTime, duration) => {
-    const curentTime = Date.now() / 1000;
-    const elapsedTime = Math.floor(curentTime - startTime);
-    setCodeExpired(() => duration - elapsedTime);
-  };
+  // const countDown = (startTime, duration) => {
+  //   const curentTime = Date.now() / 1000;
+  //   const elapsedTime = Math.floor(curentTime - startTime);
+  //   setCodeExpired(() => duration - elapsedTime);
+  // };
 
-  const adjustCountDown = () => {
-    const curentTime = Date.now() / 1000;
-    const elapsedTime = Math.floor(curentTime - codeStartTime);
-    setCodeExpired(() => codeDuration - elapsedTime);
-  };
+  // const adjustCountDown = () => {
+  //   const curentTime = Date.now() / 1000;
+  //   const elapsedTime = Math.floor(curentTime - codeStartTime);
+  //   setCodeExpired(() => codeDuration - elapsedTime);
+  // };
 
-  useEffect(() => {
-    document.addEventListener("visibilitychange", adjustCountDown);
-    return () => {
-      document.removeEventListener("visibilitychange", adjustCountDown);
-    };
-  }, [codeDuration]);
+  // useEffect(() => {
+  //   document.addEventListener("visibilitychange", adjustCountDown);
+  //   return () => {
+  //     document.removeEventListener("visibilitychange", adjustCountDown);
+  //   };
+  // }, [codeDuration]);
 
-  useEffect(() => {
-    if (codeExpired <= 0) {
-      setCode(0);
-      setCodeExpired(0);
-      clearInterval(intervalId);
-    }
-  }, [codeExpired, intervalId]);
+  // useEffect(() => {
+  //   if (codeExpired <= 0) {
+  //     setCode(0);
+  //     setCodeExpired(0);
+  //     clearInterval(intervalId);
+  //   }
+  // }, [codeExpired, intervalId]);
 
   useEffect(() => {
     if (downloadProgess == 100) {
@@ -377,13 +378,8 @@ const Upload = () => {
                         </div>
                       )}
                       <p>
-                        Expires in{" "}
-                        <span style={{ color: "#E74C3C" }}>
-                          {parseInt(codeExpired / 60)}m
-                        </span>{" "}
-                        <span style={{ color: "#E74C3C" }}>
-                          {codeExpired % 60}s
-                        </span>
+                        Expires at{" "}
+                        <span style={{ color: "#E74C3C" }}>{expiryTime}</span>
                       </p>
                     </>
                   ) : (
@@ -584,8 +580,9 @@ const Upload = () => {
                           marginTop: "5px",
                         }}
                       >
-                        Upload File Size {Math.round(uploadSizeLimit / 1024)}MB{" "}
-                        limit exceeded <br />
+                        Upload File Size{" "}
+                        {Math.round(uploadSizeLimit / (1024 * 1024))}MB limit
+                        exceeded <br />
                         uploaded Size {Math.round(uploadedFilesSize / 1024)}MB
                       </p>
                     )}
@@ -686,13 +683,8 @@ const Upload = () => {
                   <h5>Code</h5>
                   <h1>{code}</h1>
                   <p>
-                    Expires in{" "}
-                    <span style={{ color: "#E74C3C" }}>
-                      {parseInt(codeExpired / 60)}m
-                    </span>{" "}
-                    <span style={{ color: "#E74C3C" }}>
-                      {codeExpired % 60}s
-                    </span>
+                    Expires at{" "}
+                    <span style={{ color: "#E74C3C" }}>{expiryTime}</span>
                   </p>
                 </>
               ) : (
@@ -798,6 +790,27 @@ const Upload = () => {
                 Send
               </button>
             </div>
+            {uploadSizeLimit < uploadedFilesSize && (
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "#E74C3C",
+                  textAlign: "center",
+                  marginTop: "5px",
+                }}
+              >
+                Upload File Size {Math.round(uploadSizeLimit / (1024 * 1024))}MB
+                limit exceeded <br />
+                uploaded Size {Math.round(uploadedFilesSize / 1024)}MB
+              </p>
+            )}
+            <LinearProgress
+              variant="determinate"
+              className={`progressBar ${
+                uploadingStatus ? "progressBarActive" : ""
+              }`}
+              value={progress}
+            />
           </div>
           <div className="uploadSectionContentInner">
             <div style={{ marginTop: "auto", marginBottom: "auto" }}>
@@ -816,6 +829,46 @@ const Upload = () => {
                 >
                   Download
                 </button>
+              </div>
+            </div>
+            <div className="statusContainerAnimated">
+              <div className={`statusContainer`} style={{ paddingTop: "25px" }}>
+                <div>
+                  <p
+                    className={`status opacity0 ${
+                      creatingZipProgress > 0 ? "opacity1" : ""
+                    }`}
+                  >
+                    {creatingZipProgress === 100
+                      ? "Zip Created"
+                      : "Creating Zip"}
+                  </p>
+                  <LinearProgress
+                    variant="determinate"
+                    color="info"
+                    className={`progressBar ${
+                      creatingZipProgress !== 0 ? "progressBarActive" : ""
+                    }`}
+                    value={creatingZipProgress}
+                  />
+                </div>
+                <div>
+                  <p
+                    className={`status opacity0 
+                          ${downloadProgess > 0 ? "opacity1" : ""}
+                          `}
+                  >
+                    {downloadProgess == 100 ? "Downloaded" : "Downloading"}
+                  </p>
+                  <LinearProgress
+                    variant="determinate"
+                    color="success"
+                    className={`progressBar ${
+                      downloadProgess !== 0 ? "progressBarActive" : ""
+                    }`}
+                    value={downloadProgess}
+                  />
+                </div>
               </div>
             </div>
           </div>

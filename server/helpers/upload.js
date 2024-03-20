@@ -62,7 +62,7 @@ const deleteTempFiles = (files) => {
   }
 };
 
-const deleteUploadedFiles = (file, code) => {
+const deleteUploadedFiles = (file, code, expiryDuration) => {
   setTimeout(async () => {
     file?.map((file) => {
       const filePath = uploadFilesLocation + file;
@@ -77,7 +77,7 @@ const deleteUploadedFiles = (file, code) => {
       }
     });
     await fileRecord.deleteOne({ fileCode: code });
-  }, 1000 * 60 * 5);
+  }, expiryDuration);
 };
 
 module.exports = {

@@ -14,12 +14,18 @@ const { uploadFilesLocation } = require("../uploads/details");
 
 // DB
 const fileRecord = require("../models/filesRecord");
+const guestTransfer = require("../models/guesTransfer");
 const tempDp = require("../db/temp");
 
 // ROUTES
 
 // UPLOAD FILES
 const uploadFiles = (req, res) => {
+  const uploadTime = Date.now();
+  const expiryDuration = 1000 * 60 * 1;
+  const deleteTime = uploadTime + expiryDuration;
+
+  console.log(req.ip);
   upload(req, res, async (err) => {
     const transferType = req.body.transferType;
     if (err) {
@@ -30,16 +36,30 @@ const uploadFiles = (req, res) => {
     const code = uuidv4().substring(0, 6);
     const fileData = new fileRecord({
       fileName: fileNames,
+      transferredTime: new Date(uploadTime).toLocaleString(),
+      deleteTime: new Date(deleteTime).toLocaleString(),
       fileCode: code,
       isLink: transferType == 1,
     });
     await fileData.save();
-    deleteUploadedFiles(fileNames, code);
+    deleteUploadedFiles(fileNames, code, expiryDuration);
+    const transferId = "id" + uuidv4().substring(0, 16);
+    const transferData = new guestTransfer({
+      transferNumber: transferId,
+      guestIp: req.ip,
+      transferredAt: new Date(uploadTime).toLocaleString(),
+      expiryAt: new Date(deleteTime).toLocaleString(),
+    });
+    await transferData.save();
     if (transferType == 0) {
       return res.send({
         success: true,
         message: "Files uploaded successfully.",
-        file: { fileName: fileNames, code },
+        file: {
+          fileName: fileNames,
+          code,
+          expiryTime: new Date(deleteTime).toLocaleString(),
+        },
       });
     } else if (transferType == 1) {
       return res.send({
