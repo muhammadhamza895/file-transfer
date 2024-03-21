@@ -7,6 +7,7 @@ const createSubscription = async (req, res) => {
       subscriptionPrice,
       storageSpace,
       sizePerTransfer,
+      expiryTime,
     } = req.body;
     const subscriptionType = await subscriptionModel.countDocuments();
     const newSubscription = new subscriptionModel({
@@ -15,6 +16,7 @@ const createSubscription = async (req, res) => {
       subscriptionPrice,
       storageSpace,
       sizePerTransfer,
+      expiryTime,
     });
     await newSubscription.save();
     res.send({
@@ -70,5 +72,5 @@ const getSpecificSubscriptionDetails = async (req, res) => {
 module.exports = {
   createSubscription,
   getSubscriptionDetails,
-  getSpecificSubscriptionDetails
+  getSpecificSubscriptionDetails,
 };

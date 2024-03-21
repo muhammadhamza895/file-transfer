@@ -116,6 +116,10 @@ const Upload = () => {
       data.append(`files`, file);
     });
     data.append("transferType", transferType);
+    const token = localStorage.getItem("token");
+    if (token) {
+      data.append("token", token);
+    }
     const response = await uploadFile.post("/", data, {
       onUploadProgress: (progressEvent) => {
         const progress = (progressEvent.loaded / progressEvent.total) * 99;
@@ -234,11 +238,8 @@ const Upload = () => {
         getFileNames(params?.code);
       }, 500);
     }
-    const subscriptionType = localStorage.getItem("subscriptionType");
-    if (subscriptionType) {
-      getSubscriptionDetails(subscriptionType);
-    } else {
-      setUploadSizeLimit(104857600);
+    if (localStorage.getItem('token')) {
+      
     }
   }, []);
 
@@ -290,8 +291,8 @@ const Upload = () => {
       const filesSize = files?.reduce((totalSize, file) => {
         return totalSize + file.size;
       }, 0);
-      const sizeInBytes = Math.ceil(filesSize / 1024);
-      setUploadedFilesSize(sizeInBytes);
+      const sizeInKiloBytes = Math.ceil(filesSize / 1024);
+      setUploadedFilesSize(sizeInKiloBytes);
     }
   }, [files]);
 
@@ -580,9 +581,8 @@ const Upload = () => {
                           marginTop: "5px",
                         }}
                       >
-                        Upload File Size{" "}
-                        {Math.round(uploadSizeLimit / (1024 * 1024))}MB limit
-                        exceeded <br />
+                        Upload File Size {Math.round(uploadSizeLimit / 1024)}MB
+                        limit exceeded <br />
                         uploaded Size {Math.round(uploadedFilesSize / 1024)}MB
                       </p>
                     )}
@@ -799,8 +799,8 @@ const Upload = () => {
                   marginTop: "5px",
                 }}
               >
-                Upload File Size {Math.round(uploadSizeLimit / (1024 * 1024))}MB
-                limit exceeded <br />
+                Upload File Size {Math.round(uploadSizeLimit / 1024)}MB limit
+                exceeded <br />
                 uploaded Size {Math.round(uploadedFilesSize / 1024)}MB
               </p>
             )}

@@ -56,14 +56,21 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.send({ success: false, message: "Invalid credentials" });
     }
-    var token = jwt.sign({ id: user._id, email: user.email }, "shhhhh", {
-      expiresIn: "7d",
-    });
+    var token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        subscriptionType: user.subscriptionType,
+      },
+      "shhhhh",
+      {
+        expiresIn: "7d",
+      }
+    );
     res.status(200).send({
       success: true,
       user: {
         email: user.email,
-        subscriptionType: user.subscriptionType,
         token,
       },
       message: "User logged in successfully.",

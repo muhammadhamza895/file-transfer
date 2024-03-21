@@ -23,6 +23,10 @@ const subscriptionSchema = new Schema({
     type: Number,
     required: true,
   },
+  expiryTime: {
+    type: Number,
+    required: true,
+  },
 });
 
 const subscriptionModel = mongoose.model("subscription", subscriptionSchema);

@@ -51,16 +51,9 @@ function createZip(files) {
         name: file,
       });
     });
-
     archive.finalize();
   });
 }
-
-const deleteTempFiles = (files) => {
-  for (let i = 0; i < files.length; i++) {
-    rimraf.sync(`uploads/tmp/${files[i]}`);
-  }
-};
 
 const deleteUploadedFiles = (file, code, expiryDuration) => {
   setTimeout(async () => {
@@ -82,6 +75,5 @@ const deleteUploadedFiles = (file, code, expiryDuration) => {
 
 module.exports = {
   createZip,
-  deleteTempFiles,
   deleteUploadedFiles,
 };

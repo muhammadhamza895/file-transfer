@@ -3,11 +3,9 @@ const upload = require("../config/multer");
 const { v4: uuidv4 } = require("uuid");
 
 // HELPERS
-const {
-  createZip,
-  deleteTempFiles,
-  deleteUploadedFiles,
-} = require("../helpers/upload");
+const { createZip, deleteUploadedFiles } = require("../helpers/upload");
+
+const { tokenVerification } = require("../helpers/auth");
 
 // UPLOAD FOLDER LOCATION
 const { uploadFilesLocation } = require("../uploads/details");
@@ -15,6 +13,8 @@ const { uploadFilesLocation } = require("../uploads/details");
 // DB
 const fileRecord = require("../models/filesRecord");
 const guestTransfer = require("../models/guesTransfer");
+const subscription = require("../models/subscription");
+const auth = require("../models/auth");
 const tempDp = require("../db/temp");
 
 // ROUTES
@@ -22,11 +22,23 @@ const tempDp = require("../db/temp");
 // UPLOAD FILES
 const uploadFiles = (req, res) => {
   const uploadTime = Date.now();
-  const expiryDuration = 1000 * 60 * 1;
-  const deleteTime = uploadTime + expiryDuration;
+  let expiryTime = 1000 * 60 * 1;
 
-  console.log(req.ip);
   upload(req, res, async (err) => {
+    if (req.body.token) {
+      const tokenResponse = await tokenVerification(req.body.token);
+      const subscriptionType = (
+        await auth.findOne(
+          { email: tokenResponse.email },
+          { subscriptionType: 1 }
+        )
+      ).subscriptionType;
+      const subscriptionDetails = await subscription.findOne({
+        subscriptionType,
+      });
+      expiryTime = subscriptionDetails.expiryTime;
+    }
+    const deleteTime = uploadTime + expiryTime;
     const transferType = req.body.transferType;
     if (err) {
       console.error(err);
@@ -42,14 +54,16 @@ const uploadFiles = (req, res) => {
       isLink: transferType == 1,
     });
     await fileData.save();
-    deleteUploadedFiles(fileNames, code, expiryDuration);
+    deleteUploadedFiles(fileNames, code, expiryTime);
     const transferId = "id" + uuidv4().substring(0, 16);
-    const transferData = new guestTransfer({
-      transferNumber: transferId,
-      guestIp: req.ip,
-      transferredAt: new Date(uploadTime).toLocaleString(),
-      expiryAt: new Date(deleteTime).toLocaleString(),
-    });
+    if (!req.body.token) {
+      const transferData = new guestTransfer({
+        transferNumber: transferId,
+        guestIp: req.ip,
+        transferredAt: new Date(uploadTime).toLocaleString(),
+        expiryAt: new Date(deleteTime).toLocaleString(),
+      });
+    }
     await transferData.save();
     if (transferType == 0) {
       return res.send({
