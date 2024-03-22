@@ -5,8 +5,6 @@ const { v4: uuidv4 } = require("uuid");
 // HELPERS
 const { createZip, deleteUploadedFiles } = require("../helpers/upload");
 
-const { tokenVerification } = require("../helpers/auth");
-
 // UPLOAD FOLDER LOCATION
 const { uploadFilesLocation } = require("../uploads/details");
 
@@ -26,8 +24,8 @@ const uploadFiles = (req, res) => {
     let expiryTime = 1000 * 60 * 1;
 
     upload(req, res, async (err) => {
-      if (req.body.token) {
-        const tokenResponse = await tokenVerification(req.body.token);
+      if (req.user) {
+        const tokenResponse = req.user;
         const subscriptionType = (
           await auth.findOne(
             { email: tokenResponse.email },
@@ -80,7 +78,11 @@ const uploadFiles = (req, res) => {
         return res.send({
           success: true,
           message: "Files uploaded successfully.",
-          file: { fileName: fileNames, link: code },
+          file: {
+            fileName: fileNames,
+            link: code,
+            expiryTime: new Date(deleteTime).toLocaleString(),
+          },
         });
       }
     });
@@ -124,7 +126,6 @@ const downloadFiles = async (req, res) => {
           let bytesSent = 0;
 
           readStream.on("data", (chunk) => {
-            console.log(chunk);
             bytesSent += chunk.length;
             const progress = (bytesSent / fileSize) * 100;
             res.write(chunk);

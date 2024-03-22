@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router";
 
 // STYLES
 import "../styles/upload.css";
@@ -20,10 +21,11 @@ import {
   fetchSubscriptionDetails,
 } from "../axios/axios";
 
+// OTHERS
 import { toast } from "react-toastify";
 import LinearProgress from "@mui/material/LinearProgress";
-import { useParams } from "react-router";
 
+// WEBSOCKET
 const ws = new WebSocket("ws://localhost:8081");
 
 const Upload = () => {
@@ -57,8 +59,8 @@ const Upload = () => {
   const [downloadProgess, setDownloadProgress] = useState(0);
   const [downloadingStatus, setDownloadingStatus] = useState(false);
 
-  // ANIMATION FUNCTIONS
-  const handleAnimation = () => {
+  // ANIMATION FUNCTIONS DECLARATIONS
+  const handleSlideAnimation = () => {
     document.getElementsByClassName(
       "uploadSectionImageSection"
     )[0].style.width = "50%";
@@ -82,13 +84,63 @@ const Upload = () => {
     }
   };
 
+  const uploadSizeLimitAnimation = () => {
+    const animatingELement = document.getElementsByClassName(
+      "uploadAlertContainer"
+    )[0];
+    if (animatingELement) {
+      if (uploadedFilesSize > uploadSizeLimit) {
+        const requiredHeight = document.getElementsByClassName(
+          "uploadAlertContainerInner"
+        )[0].offsetHeight;
+        console.log(requiredHeight);
+        animatingELement.style.marginTop = `8px`;
+        animatingELement.style.height = `${requiredHeight}px`;
+      } else {
+        animatingELement.style.marginTop = `0px`;
+        animatingELement.style.height = "0px";
+      }
+    }
+  };
+
+  // ANIMATION FUNCTION CALLING
+  useEffect(() => {
+    uploadSizeLimitAnimation();
+  }, [uploadedFilesSize, uploadSizeLimit, files]);
+
   // FILE HANDLING
   const handleUploadedFiles = (uploadedFile) => {
     setCode(0);
-    console.log(uploadedFile)
     const allFiles = [...files, ...uploadedFile];
     setFiles(allFiles);
+    // handleFileUpload(allFiles);
   };
+
+  // const handleUploadChunk = async (chunk) => {
+  //   const data = new FormData();
+  //   data.append("chunk", chunk);
+  //   const response = await axios.post("/upload-chunk", data);
+  //   // Handle response from backend
+  // };
+
+  // const handleFileUpload = async (files) => {
+  //   const chunkSize = 1024 * 1024 * 10; // 10MB
+  //   const totalFilesSize = files.reduce((total, file) => {
+  //     return total + file.size;
+  //   }, 0);
+  //   const totalFilesSizeInMb = (totalFilesSize / (1024 * 1024)).toFixed(2);
+  //   console.log(totalFilesSize);
+  //   console.log(totalFilesSizeInMb);
+  //   let start = 0;
+  //   let end = Math.min(chunkSize, fileSize);
+
+  //   while (start < fileSize) {
+  //     const chunk = file.slice(start, end);
+  //     await handleUploadChunk(chunk);
+  //     start = end;
+  //     end = Math.min(start + chunkSize, fileSize);
+  //   }
+  // };
 
   const removeUploadedFile = (index) => {
     const newFiles = [...files];
@@ -130,6 +182,9 @@ const Upload = () => {
         const progress = 50 + (progressEvent.loaded / progressEvent.total) * 1;
         setProgress(progress);
       },
+      headers: {
+        Authorization: token,
+      },
     });
     if (response?.data?.success) {
       setExpiryTime(response?.data?.file?.expiryTime);
@@ -159,7 +214,7 @@ const Upload = () => {
 
   const downloadZipFile = async (paramCode) => {
     setDownloadingStatus(true);
-    const response = await downloadFile.get(`/${downloadCode || paramCode}`, {
+    const response = await downloadcFile.get(`/${downloadCode || paramCode}`, {
       onDownloadProgress: (progressEvent) => {
         let progress = Math.round(
           (progressEvent.loaded / progressEvent.total) * 100
@@ -212,15 +267,24 @@ const Upload = () => {
     URL.revokeObjectURL(href);
   };
 
-  const getSubscriptionDetails = async (subscriptionType) => {
-    const response = await fetchSubscriptionDetails.get(`/${subscriptionType}`);
-    setUploadSizeLimit(response?.data?.subscriptionDetails?.sizePerTransfer);
+  const getSubscriptionDetails = async (userToken) => {
+    const response = await fetchSubscriptionDetails.get(
+      `/getSpecificSubscriptionDetails`,
+      {
+        headers: {
+          Authorization: userToken,
+        },
+      }
+    );
+    const sizeInBytes = response?.data?.subscriptionDetails?.sizePerTransfer;
+    const sizeInMegaBytes = sizeInBytes / (1024 * 1024);
+    setUploadSizeLimit(sizeInMegaBytes);
   };
 
   // STATE FUNCTIONS
   const handleSend = (option) => {
     setLinkReceiver(false);
-    handleAnimation(); // OPTION 1 = SEND, 0 = RECIEVE
+    handleSlideAnimation(); // OPTION 1 = SEND, 0 = RECIEVE
     if (option) {
       setSend(true);
       setRecieve(false);
@@ -234,12 +298,17 @@ const Upload = () => {
     if (params?.code) {
       setParamCode(() => params.code);
       setTimeout(() => {
-        handleAnimation();
+        handleSlideAnimation();
         setLinkReceiver(true);
         getFileNames(params?.code);
       }, 500);
     }
     if (localStorage.getItem("token")) {
+      getSubscriptionDetails(localStorage.getItem("token"));
+    } else {
+      const sizeInBytes = 104857600;
+      const sizeInMegaBytes = sizeInBytes / (1024 * 1024);
+      setUploadSizeLimit(sizeInMegaBytes);
     }
   }, []);
 
@@ -291,8 +360,8 @@ const Upload = () => {
       const filesSize = files?.reduce((totalSize, file) => {
         return totalSize + file.size;
       }, 0);
-      const sizeInKiloBytes = Math.ceil(filesSize / 1024);
-      setUploadedFilesSize(sizeInKiloBytes);
+      const sizeInMegaBytes = (filesSize / (1024 * 1024)).toFixed(2);
+      setUploadedFilesSize(sizeInMegaBytes);
     }
   }, [files]);
 
@@ -572,20 +641,30 @@ const Upload = () => {
                         Send
                       </button>
                     </div>
-                    {uploadSizeLimit < uploadedFilesSize && (
-                      <p
-                        style={{
-                          fontSize: "12px",
-                          color: "#E74C3C",
-                          textAlign: "center",
-                          marginTop: "5px",
-                        }}
-                      >
-                        Upload File Size {Math.round(uploadSizeLimit / 1024)}MB
-                        limit exceeded <br />
-                        uploaded Size {Math.round(uploadedFilesSize / 1024)}MB
-                      </p>
-                    )}
+                    <div
+                      className="uploadAlertContainer"
+                      style={{
+                        height: "0px",
+                        overflow: "hidden",
+                        marginTop: "0px",
+                        flexShrink: "0",
+                        transition: "all 300ms",
+                      }}
+                    >
+                      <div className="uploadAlertContainerInner">
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            color: "#E74C3C",
+                            textAlign: "center",
+                          }}
+                        >
+                          Upload File Size limit {uploadSizeLimit}MB exceeded{" "}
+                          <br />
+                          uploaded Size {uploadedFilesSize}MB
+                        </p>
+                      </div>
+                    </div>
                   </>
                 )}
                 <LinearProgress
@@ -790,20 +869,30 @@ const Upload = () => {
                 Send
               </button>
             </div>
-            {uploadSizeLimit < uploadedFilesSize && (
-              <p
-                style={{
-                  fontSize: "12px",
-                  color: "#E74C3C",
-                  textAlign: "center",
-                  marginTop: "5px",
-                }}
-              >
-                Upload File Size {Math.round(uploadSizeLimit / 1024)}MB limit
-                exceeded <br />
-                uploaded Size {Math.round(uploadedFilesSize / 1024)}MB
-              </p>
-            )}
+            <div
+              className="uploadAlertContainer"
+              style={{
+                height: "0px",
+                overflow: "hidden",
+                marginTop: "0px",
+                flexShrink: "0",
+                transition: "all 300ms",
+              }}
+            >
+              <div className="uploadAlertContainerInner">
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "#E74C3C",
+                    textAlign: "center",
+                    marginTop: "5px",
+                  }}
+                >
+                  Upload File Size limit {uploadSizeLimit}MB exceeded <br />
+                  uploaded Size {uploadedFilesSize}MB
+                </p>
+              </div>
+            </div>
             <LinearProgress
               variant="determinate"
               className={`progressBar ${
