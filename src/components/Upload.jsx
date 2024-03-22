@@ -42,10 +42,6 @@ const Upload = () => {
   const [uploadSizeLimit, setUploadSizeLimit] = useState();
 
   const [code, setCode] = useState(0);
-  // const [codeExpired, setCodeExpired] = useState();
-  // const [codeStartTime, setCodeStartTime] = useState(0);
-  // const [codeDuration, setCodeDuration] = useState();
-  // const [intervalId, setIntervalId] = useState(null);
   const [downloadCode, setDownloadCode] = useState(0);
   const [expiryTime, setExpiryTime] = useState();
 
@@ -188,15 +184,6 @@ const Upload = () => {
     });
     if (response?.data?.success) {
       setExpiryTime(response?.data?.file?.expiryTime);
-      // setCodeStartTime(Date.now() / 1000);
-      // setCodeDuration(300);
-      // const startTime = Date.now() / 1000;
-      // const duration = 300;
-      // setCodeExpired(300);
-      // const id = setInterval(function () {
-      //   countDown(startTime, duration);
-      // }, 1000);
-      // setIntervalId(id);
       if (response?.data?.file?.code) {
         setCode(response?.data?.file?.code);
       } else if (response?.data?.file?.link) {
@@ -312,32 +299,6 @@ const Upload = () => {
     }
   }, []);
 
-  // const countDown = (startTime, duration) => {
-  //   const curentTime = Date.now() / 1000;
-  //   const elapsedTime = Math.floor(curentTime - startTime);
-  //   setCodeExpired(() => duration - elapsedTime);
-  // };
-
-  // const adjustCountDown = () => {
-  //   const curentTime = Date.now() / 1000;
-  //   const elapsedTime = Math.floor(curentTime - codeStartTime);
-  //   setCodeExpired(() => codeDuration - elapsedTime);
-  // };
-
-  // useEffect(() => {
-  //   document.addEventListener("visibilitychange", adjustCountDown);
-  //   return () => {
-  //     document.removeEventListener("visibilitychange", adjustCountDown);
-  //   };
-  // }, [codeDuration]);
-
-  // useEffect(() => {
-  //   if (codeExpired <= 0) {
-  //     setCode(0);
-  //     setCodeExpired(0);
-  //     clearInterval(intervalId);
-  //   }
-  // }, [codeExpired, intervalId]);
 
   useEffect(() => {
     if (downloadProgess == 100) {
