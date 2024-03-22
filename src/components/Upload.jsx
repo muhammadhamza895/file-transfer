@@ -85,6 +85,7 @@ const Upload = () => {
   // FILE HANDLING
   const handleUploadedFiles = (uploadedFile) => {
     setCode(0);
+    console.log(uploadedFile)
     const allFiles = [...files, ...uploadedFile];
     setFiles(allFiles);
   };
@@ -151,7 +152,7 @@ const Upload = () => {
       setProgress(0);
       return toast.success("File uploaded successfully!");
     }
-    toast.error("Error occured. Please try again!");
+    toast.error("Error occured. Please try again later!");
     setUploadingStatus(false);
     setProgress(0);
   };
@@ -238,8 +239,7 @@ const Upload = () => {
         getFileNames(params?.code);
       }, 500);
     }
-    if (localStorage.getItem('token')) {
-      
+    if (localStorage.getItem("token")) {
     }
   }, []);
 
